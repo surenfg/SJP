@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk: #E8EDF1; --paper: #FFFFFF; --ink: #1C2B3A; --muted: #5F6F7E;
+    --rule: #D3DCE4; --field: #F4F7FA; --accent: #1F6F63; --accent-soft: #E1F0EC;
+    --warn: #9A6A12; --warn-soft: #FBF0D9; --danger: #A33A2F; --danger-soft: #F8E3E0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--desk); color: var(--ink);
+    font: 15px/1.5 "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .app { display: grid; grid-template-columns: 210px 1fr; min-height: 100vh; }
+  .sidebar { background: var(--ink); color: #fff; padding: 22px 14px; }
+  .brand { font-family: "Source Serif 4", Georgia, serif; font-size: 22px; margin: 0 8px 24px; }
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav button { text-align: left; background: none; color: rgba(255,255,255,.78); border: 0; padding: 9px 10px; border-radius: 6px; }
+  .nav button:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .nav button.active { background: rgba(255,255,255,.14); color: #fff; }
+  .nav .new { margin-top: 14px; background: var(--accent); color: #fff; text-align: center; }
+  main { padding: 28px 32px 60px; max-width: 1100px; width: 100%; }
+  h1 { font-size: 24px; margin: 0 0 20px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  .row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .row-between h1 { margin: 0; }
+  button { font: inherit; font-weight: 600; cursor: pointer; padding: 8px 14px; border-radius: 6px; border: 1px solid transparent; }
+  .btn { background: var(--accent); color: #fff; }
+  .btn-ghost { background: var(--paper); color: var(--ink); border-color: var(--rule); }
+  .btn-danger { background: var(--paper); color: var(--danger); border-color: var(--rule); }
+  .btn-sm { padding: 4px 10px; font-size: 13px; }
+  .icon-btn { background: none; color: var(--danger); font-size: 18px; padding: 2px 8px; line-height: 1; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .panel { background: var(--paper); border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--rule); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; }
+  .stat span { display: block; font-size: 13px; color: var(--muted); }
+  .stat strong { display: block; font-size: 22px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .stat.good { border-left: 4px solid var(--accent); }
+  .stat.warn { border-left: 4px solid var(--warn); }
+  .stat.bad { border-left: 4px solid var(--danger); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  td { padding: 9px 8px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+  .link { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; text-decoration: underline; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; }
+  .badge.paid { background: var(--accent-soft); color: var(--accent); }
+  .badge.pending { background: var(--warn-soft); color: var(--warn); }
+  .badge.overdue { background: var(--danger-soft); color: var(--danger); }
+  .empty { color: var(--muted); padding: 12px 0; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); font-weight: 500; }
+  input, select, textarea { font: inherit; color: var(--ink); background: var(--field); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 9px; width: 100%; }
+  textarea { min-height: 70px; resize: vertical; }
+  td input, td select { padding: 5px 7px; }
+  td.num input { text-align: right; }
+  .form-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .filters button.on { background: var(--ink); color: #fff; }
+  .filters input { max-width: 240px; }
+  .steps { margin: 0; padding-left: 20px; }
+  .steps li { margin-bottom: 6px; }
+  .steps .done { color: var(--muted); text-decoration: line-through; }
+  .totals-box { margin-left: auto; width: 300px; display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: center; margin-top: 16px; font-variant-numeric: tabular-nums; }
+  .totals-box span:nth-child(odd) { color: var(--muted); }
+  .totals-box input { width: 70px; display: inline-block; text-align: right; padding: 3px 6px; }
+  .grand { border-top: 2px solid var(--ink); padding-top: 8px; font-size: 19px; font-weight: 700; color: var(--ink) !important; }
+
+  /* Printable invoice */
+  .paper { background: var(--paper); max-width: 820px; padding: 48px 52px; box-shadow: 0 1px 2px rgba(28,43,58,.08), 0 12px 32px rgba(28,43,58,.10); }
+  .inv-head { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .inv-title { font-family: "Source Serif 4", Georgia, serif; font-size: 42px; line-height: 1; color: var(--accent); margin: 0 0 16px; }
+  .inv-meta { display: grid; grid-template-columns: auto auto; gap: 2px 14px; font-size: 14px; }
+  .inv-meta span:nth-child(odd) { color: var(--muted); }
+  .inv-logo img { max-width: 170px; max-height: 80px; }
+  .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin: 32px 0 24px; font-size: 14px; }
+  .inv-parties h3 { font-size: 13px; color: var(--muted); margin: 0 0 4px; font-weight: 600; }
+  .inv-parties strong { font-size: 16px; }
+  .inv-parties p { margin: 0; white-space: pre-line; }
+  .paper th { border-bottom: 2px solid var(--ink); }
+  .inv-notes { margin-top: 28px; font-size: 14px; white-space: pre-line; }
+  .inv-notes h3 { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
+  .stamp { display: inline-block; margin-top: 10px; }
+
+  @media (max-width: 800px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { padding: 12px; position: sticky; top: 0; z-index: 5; }
+    .brand { display: none; }
+    .nav { flex-direction: row; overflow-x: auto; }
+    .nav button { white-space: nowrap; }
+    .nav .new { margin-top: 0; }
+    main { padding: 18px 14px 50px; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .paper { padding: 26px 18px; }
+    .inv-parties { grid-template-columns: 1fr; }
+    .totals-box { width: 100%; }
+  }
+  @media print {
+    body { background: #fff; }
+    .app { display: block; }
+    .sidebar, .no-print { display: none !important; }
+    main { padding: 0; max-width: none; }
+    .paper { box-shadow: none; padding: 0; max-width: none; }
+    @page { margin: 16mm; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <p class="brand">Invoices</p>
+    <nav class="nav" id="nav">
+      <button data-nav="dashboard">Dashboard</button>
+      <button data-nav="invoices">Invoices</button>
+      <button data-nav="customers">Customers</button>
+      <button data-nav="products">Products</button>
+      <button data-nav="settings">Business settings</button>
+      <button class="new" data-nav="newInvoice">New invoice</button>
+    </nav>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script>
+/* ---------- Data (saved in this browser) ---------- */
+const DB_KEY = "invoice-manager-v1";
+const blank = () => ({
+  settings: { bizName: "", address: "", contact: "", taxId: "", currency: "₹", tax: 18, prefix: "INV-", nextNo: 1, notes: "", logo: "" },
+  customers: [], products: [], invoices: []
+});
+let db = (() => { try { return JSON.parse(localStorage.getItem(DB_KEY)) || blank(); } catch (e) { return blank(); } })();
+function save() {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+  catch (e) { alert("Could not save. Browser storage may be full. Try a smaller logo image."); }
+}
+
+/* ---------- Helpers ---------- */
+const $ = s => document.querySelector(s);
+const main = $("#main");
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const today = () => new Date().toISOString().slice(0, 10);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = n => esc(db.settings.currency) + " " + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDate = d => d ? new Date(d + "T00:00").toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "—";
+function totals(inv) {
+  const sub = inv.items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
+  const disc = sub * (Number(inv.discount) || 0) / 100;
+  const tax = (sub - disc) * (Number(inv.tax) || 0) / 100;
+  return { sub, disc, tax, total: sub - disc + tax };
+}
+const statusOf = inv => inv.status === "paid" ? "paid" : (inv.due && inv.due < today() ? "overdue" : "pending");
+const badge = inv => { const s = statusOf(inv); return `<span class="badge ${s}">${{ paid: "Received", pending: "Pending", overdue: "Overdue" }[s]}</span>`; };
+const custName = inv => (db.customers.find(c => c.id === inv.customerId) || inv.customer || {}).name || "—";
+
+/* ---------- Navigation ---------- */
+let route = { view: "dashboard", id: null };
+function go(view, id = null) { route = { view, id }; render(); window.scrollTo(0, 0); }
+function render() {
+  const navKey = { newInvoice: "invoices", invoice: "invoices" }[route.view] || route.view;
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.nav === navKey && route.view !== "newInvoice"));
+  views[route.view]();
+}
+$("#nav").onclick = e => { const b = e.target.closest("[data-nav]"); if (b) go(b.dataset.nav); };
+
+/* Shared click actions inside the page */
+main.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const id = b.dataset.id;
+  const inv = db.invoices.find(i => i.id === id);
+  const acts = {
+    go: () => go(b.dataset.to, id || null),
+    paid: () => { inv.status = "paid"; inv.paidDate = today(); save(); render(); },
+    unpaid: () => { inv.status = "pending"; inv.paidDate = ""; save(); render(); },
+    delInv: () => { if (confirm(`Delete invoice ${inv.number}? This cannot be undone.`)) { db.invoices = db.invoices.filter(i => i.id !== id); save(); go("invoices"); } },
+    print: () => { const t = document.title; document.title = inv.number; window.print(); document.title = t; }
+  };
+  acts[b.dataset.act] && acts[b.dataset.act]();
+});
+
+function invoiceRows(list, withCustomer = true) {
+  if (!list.length) return `<p class="empty">No invoices here yet.</p>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Invoice</th>${withCustomer ? "<th>Customer</th>" : ""}<th>Date</th><th>Due</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead>
+    <tbody>${list.map(i => `<tr>
+      <td><button class="link" data-act="go" data-to="invoice" data-id="${i.id}">${esc(i.number)}</button></td>
+      ${withCustomer ? `<td>${esc(custName(i))}</td>` : ""}
+      <td>${fmtDate(i.date)}</td><td>${fmtDate(i.due)}</td>
+      <td class="num">${money(totals(i).total)}</td><td>${badge(i)}</td>
+      <td><div class="actions">${i.status === "paid"
+        ? `<button class="btn-ghost btn-sm" data-act="unpaid" data-id="${i.id}">Mark pending</button>`
+        : `<button class="btn btn-sm" data-act="paid" data-id="${i.id}">Mark received</button>`}</div></td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ---------- Views ---------- */
+const views = {};
+
+views.dashboard = () => {
+  const s = db.settings;
+  let billed = 0, received = 0, pending = 0, overdue = 0;
+  db.invoices.forEach(i => {
+    const t = totals(i).total; billed += t;
+    const st = statusOf(i);
+    if (st === "paid") received += t; else { pending += t; if (st === "overdue") overdue += t; }
+  });
+  const setupDone = [!!s.bizName, db.customers.length > 0, db.products.length > 0, db.invoices.length > 0];
+  const pendingList = db.invoices.filter(i => i.status !== "paid").sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+  const recentPaid = db.invoices.filter(i => i.status === "paid").sort((a, b) => (b.paidDate || "").localeCompare(a.paidDate || "")).slice(0, 5);
+  const byCustomer = db.customers.map(c => {
+    const inv = db.invoices.filter(i => i.customerId === c.id);
+    const r = { name: c.name, count: inv.length, billed: 0, received: 0, pending: 0 };
+    inv.forEach(i => { const t = totals(i).total; r.billed += t; i.status === "paid" ? r.received += t : r.pending += t; });
+    return r;
+  }).filter(r => r.count).sort((a, b) => b.pending - a.pending);
+
+  main.innerHTML = `
+    <h1>Dashboard</h1>
+    ${setupDone.every(Boolean) ? "" : `<div class="panel"><h2>Get started</h2><ol class="steps">
+      <li class="${setupDone[0] ? "done" : ""}"><button class="link" data-act="go" data-to="settings">Add your business details</button></li>
+      <li class="${setupDone[1] ? "done" : ""}"><button class="link" data-act="go" data-to="customers">Add your customers</button></li>
+      <li class="${setupDone[2] ? "done" : ""}"><button class="link" data-act="go" data-to="products">Add your products and prices</button></li>
+      <li class="${setupDone[3] ? "done" : ""}"><button class="link" data-act="go" data-to="newInvoice">Create your first invoice</button></li>
+    </ol></div>`}
+    <div class="stats">
+      <div class="stat"><span>Total billed</span><strong>${money(billed)}</strong></div>
+      <div class="stat good"><span>Received</span><strong>${money(received)}</strong></div>
+      <div class="stat warn"><span>Pending</span><strong>${money(pending)}</strong></div>
+      <div class="stat bad"><span>Overdue</span><strong>${money(overdue)}</strong></div>
+    </div>
+    <div class="panel"><h2>Pending payments (${pendingList.length})</h2>${invoiceRows(pendingList)}</div>
+    <div class="panel"><h2>By customer</h2>${byCustomer.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Customer</th><th class="num">Invoices</th><th class="num">Billed</th><th class="num">Received</th><th class="num">Pending</th></tr></thead>
+      <tbody>${byCustomer.map(r => `<tr><td>${esc(r.name)}</td><td class="num">${r.count}</td><td class="num">${money(r.billed)}</td><td class="num">${money(r.received)}</td><td class="num">${money(r.pending)}</td></tr>`).join("")}</tbody>
+    </table></div>` : `<p class="empty">Customer totals appear once you create invoices.</p>`}</div>
+    <div class="panel"><h2>Recently received</h2>${invoiceRows(recentPaid)}</div>`;
+};
+
+let invFilter = "all", invSearch = "";
+views.invoices = () => {
+  const list = db.invoices
+    .filter(i => invFilter === "all" || (invFilter === "paid" ? i.status === "paid" : i.status !== "paid"))
+    .filter(i => !invSearch || (i.number + " " + custName(i)).toLowerCase().includes(invSearch.toLowerCase()))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.number.localeCompare(a.number));
+  main.innerHTML = `
+    <div class="row-between"><h1>Invoices</h1><button class="btn" data-act="go" data-to="newInvoice">New invoice</button></div>
+    <div class="panel">
+      <div class="filters">
+        ${[["all", "All"], ["pending", "Pending"], ["paid", "Received"]].map(([k, l]) => `<button class="btn-ghost btn-sm ${invFilter === k ? "on" : ""}" data-f="${k}">${l}</button>`).join("")}
+        <input id="search" placeholder="Search invoice no. or customer" value="${esc(invSearch)}">
+      </div>
+      ${invoiceRows(list)}
+    </div>`;
+  main.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { invFilter = b.dataset.f; render(); });
+  const s = $("#search");
+  s.oninput = () => { invSearch = s.value; render(); const n = $("#search"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+};
+
+/* Simple list + form screen for customers and products */
+function listScreen({ title, key, fields, columns, emptyText }) {
+  let editId = null;
+  function draw() {
+    const items = db[key];
+    const editing = items.find(x => x.id === editId) || {};
+    main.innerHTML = `
+      <h1>${title}</h1>
+      <div class="panel"><h2>${editId ? "Edit" : "Add new"}</h2>
+        <form id="f"><div class="form-grid">
+          ${fields.map(f => `<label class="f">${f.label}${f.required ? " *" : ""}
+            <input name="${f.name}" type="${f.type || "text"}" ${f.type === "number" ? 'min="0" step="any"' : ""} ${f.required ? "required" : ""} value="${esc(editing[f.name] ?? "")}"></label>`).join("")}
+        </div>
+        <div class="form-actions"><button class="btn" type="submit">${editId ? "Save changes" : "Add"}</button>
+        ${editId ? `<button class="btn-ghost" type="button" id="cancel">Cancel</button>` : ""}</div></form>
+      </div>
+      <div class="panel"><h2>All ${title.toLowerCase()} (${items.length})</h2>
+        ${items.length ? `<div class="table-wrap"><table>
+          <thead><tr>${columns.map(c => `<th class="${c.num ? "num" : ""}">${c.label}</th>`).join("")}<th></th></tr></thead>
+          <tbody>${items.map(x => `<tr>${columns.map(c => `<td class="${c.num ? "num" : ""}">${c.show ? c.show(x) : esc(x[c.name])}</td>`).join("")}
+            <td><div class="actions"><button class="btn-ghost btn-sm" data-edit="${x.id}">Edit</button><button class="btn-danger btn-sm" data-del="${x.id}">Delete</button></div></td></tr>`).join("")}</tbody>
+        </table></div>` : `<p class="empty">${emptyText}</p>`}
+      </div>`;
+    $("#f").onsubmit = e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      fields.filter(f => f.type === "number").forEach(f => data[f.name] = Number(data[f.name]) || 0);
+      if (editId) Object.assign(editing, data); else items.push({ id: uid(), ...data });
+      editId = null; save(); draw();
+    };
+    const c = $("#cancel"); if (c) c.onclick = () => { editId = null; draw(); };
+    main.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => { editId = b.dataset.edit; draw(); window.scrollTo(0, 0); });
+    main.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+      const x = items.find(i => i.id === b.dataset.del);
+      if (confirm(`Delete ${x.name}? Existing invoices keep their details.`)) { db[key] = items.filter(i => i !== x); save(); draw(); }
+    });
+  }
+  draw();
+}
+
+views.customers = () => listScreen({
+  title: "Customers", key: "customers", emptyText: "No customers yet. Add your first one above.",
+  fields: [{ name: "name", label: "Customer name", required: true }, { name: "phone", label: "Phone" }, { name: "email", label: "Email", type: "email" },
+    { name: "address", label: "Address" }, { name: "taxId", label: "Tax ID / GSTIN" }],
+  columns: [{ name: "name", label: "Name" }, { name: "phone", label: "Phone" }, { name: "email", label: "Email" }, { name: "address", label: "Address" }]
+});
+
+views.products = () => listScreen({
+  title: "Products", key: "products", emptyText: "No products yet. Add your first one above.",
+  fields: [{ name: "name", label: "Product or service name", required: true }, { name: "price", label: "Price per unit", type: "number", required: true },
+    { name: "unit", label: "Unit (pcs, kg, hour…)" }],
+  columns: [{ name: "name", label: "Name" }, { name: "unit", label: "Unit" }, { name: "price", label: "Price", num: true, show: x => money(x.price) }]
+});
+
+views.newInvoice = () => {
+  const s = db.settings;
+  const editing = route.id ? db.invoices.find(i => i.id === route.id) : null;
+  if (!db.customers.length || !db.products.length) {
+    main.innerHTML = `<h1>New invoice</h1><div class="panel"><p>Before creating an invoice, add at least one customer and one product.</p>
+      <div class="form-actions"><button class="btn" data-act="go" data-to="customers">Add customers</button><button class="btn-ghost" data-act="go" data-to="products">Add products</button></div></div>`;
+    return;
+  }
+  const inv = editing ? JSON.parse(JSON.stringify(editing)) : {
+    number: s.prefix + String(s.nextNo).padStart(3, "0"), date: today(), due: "", customerId: "",
+    items: [{ productId: "", name: "", qty: 1, price: 0 }], discount: 0, tax: s.tax, notes: s.notes, status: "pending"
+  };
+  const custOptions = db.customers.map(c => `<option value="${c.id}" ${c.id === inv.customerId ? "selected" : ""}>${esc(c.name)}</option>`).join("")
+    + (inv.customerId && !db.customers.find(c => c.id === inv.customerId) ? `<option value="${inv.customerId}" selected>${esc(inv.customer?.name)}</option>` : "");
+
+  main.innerHTML = `
+    <h1>${editing ? "Edit invoice " + esc(inv.number) : "New invoice"}</h1>
+    <form id="invForm" class="panel">
+      <div class="form-grid">
+        <label class="f">Customer *<select name="customerId" required><option value="">Choose customer</option>${custOptions}</select></label>
+        <label class="f">Invoice no. *<input name="number" required value="${esc(inv.number)}"></label>
+        <label class="f">Invoice date<input name="date" type="date" value="${inv.date}"></label>
+        <label class="f">Due date<input name="due" type="date" value="${inv.due}"></label>
+      </div>
+      <h2 style="margin-top:22px">Items</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Product</th><th class="num" style="width:90px">Qty</th><th class="num" style="width:130px">Price</th><th class="num" style="width:140px">Amount</th><th style="width:40px"></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <button type="button" class="btn-ghost btn-sm" id="addRow" style="margin-top:10px">Add item</button>
+      <div class="totals-box">
+        <span>Subtotal</span><span id="tSub"></span>
+        <span>Discount <input name="discount" type="number" min="0" step="any" value="${inv.discount}">%</span><span id="tDisc"></span>
+        <span>Tax <input name="tax" type="number" min="0" step="any" value="${inv.tax}">%</span><span id="tTax"></span>
+        <span class="grand">Total</span><span class="grand" id="tTotal"></span>
+      </div>
+      <label class="f" style="margin-top:18px">Notes and payment details<textarea name="notes">${esc(inv.notes)}</textarea></label>
+      <div class="form-actions"><button class="btn" type="submit">${editing ? "Save changes" : "Create invoice"}</button>
+        <button type="button" class="btn-ghost" data-act="go" data-to="${editing ? "invoice" : "invoices"}" data-id="${editing ? editing.id : ""}">Cancel</button></div>
+    </form>`;
+
+  const rows = $("#rows"), form = $("#invForm");
+  function addRow(it) {
+    const tr = document.createElement("tr");
+    const missing = it.productId && !db.products.find(p => p.id === it.productId);
+    tr.innerHTML = `
+      <td><select class="p"><option value="">Choose product</option>
+        ${db.products.map(p => `<option value="${p.id}" ${p.id === it.productId ? "selected" : ""}>${esc(p.name)}</option>`).join("")}
+        ${missing ? `<option value="${it.productId}" selected>${esc(it.name)}</option>` : ""}</select></td>
+      <td class="num"><input class="q" type="number" min="0" step="any" value="${it.qty}"></td>
+      <td class="num"><input class="pr" type="number" min="0" step="any" value="${it.price}"></td>
+      <td class="num amt"></td>
+      <td><button type="button" class="icon-btn" aria-label="Remove item">×</button></td>`;
+    tr.querySelector(".p").onchange = e => { const p = db.products.find(x => x.id === e.target.value); if (p) tr.querySelector(".pr").value = p.price; recalc(); };
+    tr.querySelector(".icon-btn").onclick = () => { tr.remove(); recalc(); };
+    rows.appendChild(tr);
+  }
+  function readItems() {
+    return [...rows.querySelectorAll("tr")].map(tr => {
+      const sel = tr.querySelector(".p");
+      return { productId: sel.value, name: sel.value ? sel.selectedOptions[0].text : "", qty: Number(tr.querySelector(".q").value) || 0, price: Number(tr.querySelector(".pr").value) || 0 };
+    });
+  }
+  function recalc() {
+    const items = readItems();
+    rows.querySelectorAll("tr").forEach((tr, i) => tr.querySelector(".amt").innerHTML = money(items[i].qty * items[i].price));
+    const t = totals({ items, discount: form.discount.value, tax: form.tax.value });
+    const put = (id, v) => $(id).innerHTML = v;
+    put("#tSub", money(t.sub)); put("#tDisc", "− " + money(t.disc)); put("#tTax", money(t.tax)); put("#tTotal", money(t.total));
+  }
+  inv.items.forEach(addRow);
+  $("#addRow").onclick = () => { addRow({ productId: "", name: "", qty: 1, price: 0 }); recalc(); };
+  form.oninput = recalc;
+  recalc();
+
+  form.onsubmit = e => {
+    e.preventDefault();
+    const items = readItems().filter(i => i.productId);
+    if (!items.length) { alert("Add at least one product to the invoice."); return; }
+    const c = db.customers.find(x => x.id === form.customerId.value);
+    const data = {
+      customerId: form.customerId.value, customer: c ? { ...c } : inv.customer,
+      number: form.number.value.trim(), date: form.date.value, due: form.due.value,
+      items, discount: Number(form.discount.value) || 0, tax: Number(form.tax.value) || 0, notes: form.notes.value
+    };
+    if (editing) { Object.assign(editing, data); save(); go("invoice", editing.id); }
+    else {
+      const n = { id: uid(), status: "pending", paidDate: "", created: today(), ...data };
+      db.invoices.push(n); db.settings.nextNo = (Number(db.settings.nextNo) || 1) + 1; save(); go("invoice", n.id);
+    }
+  };
+};
+
+views.invoice = () => {
+  const inv = db.invoices.find(i => i.id === route.id);
+  if (!inv) return go("invoices");
+  const s = db.settings, c = db.customers.find(x => x.id === inv.customerId) || inv.customer || {};
+  const t = totals(inv);
+  main.innerHTML = `
+    <div class="row-between no-print">
+      <button class="btn-ghost" data-act="go" data-to="invoices">Back to invoices</button>
+      <div class="actions">
+        ${inv.status === "paid"
+          ? `<button class="btn-ghost" data-act="unpaid" data-id="${inv.id}">Mark pending</button>`
+          : `<button class="btn" data-act="paid" data-id="${inv.id}">Mark received</button>`}
+        <button class="btn-ghost" data-act="go" data-to="newInvoice" data-id="${inv.id}">Edit</button>
+        <button class="btn-ghost" data-act="print" data-id="${inv.id}">Download PDF</button>
+        <button class="btn-danger" data-act="delInv" data-id="${inv.id}">Delete</button>
+      </div>
+    </div>
+    <p class="no-print">Status: ${badge(inv)} ${inv.status === "paid" && inv.paidDate ? `received on ${fmtDate(inv.paidDate)}` : ""}</p>
+    <div class="paper">
+      <div class="inv-head">
+        <div>
+          <p class="inv-title">Invoice</p>
+          <div class="inv-meta">
+            <span>Invoice no.</span><span>${esc(inv.number)}</span>
+            <span>Invoice date</span><span>${fmtDate(inv.date)}</span>
+            ${inv.due ? `<span>Due date</span><span>${fmtDate(inv.due)}</span>` : ""}
+          </div>
+        </div>
+        <div class="inv-logo">${s.logo ? `<img src="${s.logo}" alt="">` : ""}</div>
+      </div>
+      <div class="inv-parties">
+        <div><h3>From</h3><strong>${esc(s.bizName || "Your business name")}</strong>
+          <p>${esc(s.address)}</p><p>${esc(s.contact)}</p>${s.taxId ? `<p>Tax ID: ${esc(s.taxId)}</p>` : ""}</div>
+        <div><h3>Bill to</h3><strong>${esc(c.name)}</strong>
+          <p>${esc(c.address)}</p><p>${esc([c.phone, c.email].filter(Boolean).join(", "))}</p>${c.taxId ? `<p>Tax ID: ${esc(c.taxId)}</p>` : ""}</div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+        <tbody>${inv.items.map(it => `<tr><td>${esc(it.name)}</td><td class="num">${it.qty}</td><td class="num">${money(it.price)}</td><td class="num">${money(it.qty * it.price)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      <div class="totals-box">
+        <span>Subtotal</span><span class="num">${money(t.sub)}</span>
+        ${inv.discount ? `<span>Discount (${inv.discount}%)</span><span class="num">− ${money(t.disc)}</span>` : ""}
+        ${inv.tax ? `<span>Tax (${inv.tax}%)</span><span class="num">${money(t.tax)}</span>` : ""}
+        <span class="grand">Total</span><span class="grand num">${money(t.total)}</span>
+      </div>
+      ${inv.status === "paid" ? `<span class="badge paid stamp">Paid${inv.paidDate ? " on " + fmtDate(inv.paidDate) : ""}</span>` : ""}
+      ${inv.notes ? `<div class="inv-notes"><h3>Notes and payment details</h3>${esc(inv.notes)}</div>` : ""}
+    </div>`;
+};
+
+views.settings = () => {
+  const s = db.settings;
+  main.innerHTML = `
+    <h1>Business settings</h1>
+    <form id="sf" class="panel"><h2>Your business details</h2>
+      <div class="form-grid">
+        <label class="f">Business name<input name="bizName" value="${esc(s.bizName)}"></label>
+        <label class="f">Address<input name="address" value="${esc(s.address)}"></label>
+        <label class="f">Phone / email<input name="contact" value="${esc(s.contact)}"></label>
+        <label class="f">Tax ID / GSTIN<input name="taxId" value="${esc(s.taxId)}"></label>
+        <label class="f">Currency symbol<input name="currency" value="${esc(s.currency)}"></label>
+        <label class="f">Default tax %<input name="tax" type="number" min="0" step="any" value="${s.tax}"></label>
+        <label class="f">Invoice number prefix<input name="prefix" value="${esc(s.prefix)}"></label>
+        <label class="f">Next invoice number<input name="nextNo" type="number" min="1" value="${s.nextNo}"></label>
+      </div>
+      <label class="f" style="margin-top:12px">Default notes (bank details, UPI, payment terms)<textarea name="notes">${esc(s.notes)}</textarea></label>
+      <label class="f" style="margin-top:12px">Logo ${s.logo ? `<img src="${s.logo}" alt="" style="max-height:50px;align-self:flex-start">` : ""}<input type="file" id="logo" accept="image/*"></label>
+      <div class="form-actions"><button class="btn" type="submit">Save settings</button>${s.logo ? `<button class="btn-ghost" type="button" id="rmLogo">Remove logo</button>` : ""}</div>
+    </form>
+    <div class="panel"><h2>Backup</h2>
+      <p>Your data is stored only in this browser. Download a backup regularly, and use it to restore your data on another device or browser.</p>
+      <div class="form-actions"><button class="btn-ghost" id="exp">Download backup</button>
+        <label class="btn-ghost" style="padding:8px 14px;border-radius:6px;border:1px solid var(--rule);font-weight:600;cursor:pointer">Restore from backup<input type="file" id="imp" accept=".json" hidden></label></div>
+    </div>`;
+  $("#sf").onsubmit = e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target));
+    Object.assign(s, d, { tax: Number(d.tax) || 0, nextNo: Number(d.nextNo) || 1 });
+    save(); alert("Settings saved."); render();
+  };
+  $("#logo").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => { s.logo = r.result; save(); render(); }; r.readAsDataURL(f);
+  };
+  const rm = $("#rmLogo"); if (rm) rm.onclick = () => { s.logo = ""; save(); render(); };
+  $("#exp").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], { type: "application/json" }));
+    a.download = "invoice-backup-" + today() + ".json"; a.click();
+  };
+  $("#imp").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result);
+        if (!d.settings || !Array.isArray(d.invoices)) throw 0;
+        if (confirm("Replace all current data with this backup?")) { db = d; save(); go("dashboard"); }
+      } catch (err) { alert("This file is not a valid invoice backup."); }
+    };
+    r.readAsText(f);
+  };
+};
+
+render();
+</script>
+</body>
+</html>
